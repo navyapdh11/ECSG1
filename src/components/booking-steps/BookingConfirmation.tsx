@@ -1,24 +1,18 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, Calendar, Clock, MapPin, DollarSign, FileText } from 'lucide-react';
+import { CheckCircle, Calendar, Clock, MapPin, DollarSign, FileText, CreditCard, Loader2 } from 'lucide-react';
 import { useBookingStore } from '@/store/bookingStore';
-import { formatPrice, formatDate, formatTime } from '@/lib/utils';
 import { useGamificationStore } from '@/store/gamificationStore';
+import { formatPrice, formatDate, formatTime } from '@/lib/utils';
 
 export function BookingConfirmation() {
   const { selectedServices, selectedDate, selectedTime, address, specialInstructions, getTotalPrice } =
     useBookingStore();
   const { addPoints } = useGamificationStore();
-
-  // Award points on confirmation mount
-  useEffect(() => {
-    const points = Math.floor(getTotalPrice() / 10);
-    if (points > 0) {
-      addPoints(points);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Safety: handle missing data
   if (selectedServices.length === 0) {
@@ -29,6 +23,57 @@ export function BookingConfirmation() {
     );
   }
 
+  const totalPrice = getTotalPrice();
+
+  const handleCheckout = async () => {
+    setProcessing(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          services: selectedServices.map(({ service, quantity }) => ({
+            name: service.name,
+            price: service.price,
+            quantity,
+          })),
+          total: totalPrice,
+          email: address.email || '',
+          name: address.name || '',
+          phone: address.phone || '',
+          date: selectedDate ? new Date(selectedDate).toISOString() : '',
+          time: selectedTime,
+          address: {
+            street: address.street || '',
+            city: address.city || '',
+            state: address.state || '',
+            zipCode: address.zipCode || '',
+            country: address.country || 'US',
+          },
+          specialInstructions,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Checkout failed');
+      }
+
+      const data = await response.json();
+
+      // Award points
+      addPoints(Math.floor(totalPrice / 10));
+
+      // Redirect to Stripe Checkout
+      window.location.href = data.url;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Payment failed');
+      setProcessing(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Success Message */}
@@ -38,9 +83,9 @@ export function BookingConfirmation() {
         className="text-center p-8 bg-gradient-to-br from-primary-50 to-accent-50 rounded-xl"
       >
         <CheckCircle className="w-16 h-16 text-primary-600 mx-auto mb-4" aria-hidden="true" />
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Booking Confirmed! 🎉</h2>
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">Ready to Pay</h2>
         <p className="text-gray-600">
-          Your cleaning service has been successfully booked
+          Review your booking details and proceed to secure payment
         </p>
       </motion.div>
 
@@ -54,17 +99,12 @@ export function BookingConfirmation() {
           </h3>
           <div className="space-y-3">
             {selectedServices.map(({ service, quantity }) => (
-              <div
-                key={service.id}
-                className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
-              >
+              <div key={service.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                 <div>
                   <p className="font-medium text-gray-900">{service.name}</p>
                   <p className="text-sm text-gray-600">Qty: {quantity}</p>
                 </div>
-                <p className="font-semibold text-gray-900">
-                  {formatPrice(service.price * quantity)}
-                </p>
+                <p className="font-semibold text-gray-900">{formatPrice(service.price * quantity)}</p>
               </div>
             ))}
           </div>
@@ -125,9 +165,7 @@ export function BookingConfirmation() {
           <div className="space-y-2 mb-4">
             {selectedServices.map(({ service, quantity }) => (
               <div key={service.id} className="flex justify-between text-sm opacity-90">
-                <span>
-                  {service.name} × {quantity}
-                </span>
+                <span>{service.name} × {quantity}</span>
                 <span>{formatPrice(service.price * quantity)}</span>
               </div>
             ))}
@@ -135,7 +173,7 @@ export function BookingConfirmation() {
           <div className="pt-4 border-t border-white/20">
             <div className="flex justify-between text-2xl font-bold">
               <span>Total</span>
-              <span>{formatPrice(getTotalPrice())}</span>
+              <span>{formatPrice(totalPrice)}</span>
             </div>
           </div>
         </div>
@@ -149,18 +187,39 @@ export function BookingConfirmation() {
         </div>
       )}
 
-      {/* Earned Points */}
+      {/* Error */}
+      {error && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 bg-error-50 text-error-700 rounded-xl text-center" role="alert">
+          {error}
+        </motion.div>
+      )}
+
+      {/* Checkout Button */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="p-6 bg-gradient-to-br from-accent-50 to-primary-50 rounded-xl text-center"
+        transition={{ delay: 0.3 }}
+        className="p-6 bg-gradient-to-br from-accent-50 to-primary-50 rounded-xl"
       >
-        <p className="text-2xl font-bold text-accent-600 mb-2">
-          +{Math.floor(getTotalPrice() / 10)} Points Earned! 🎮
-        </p>
-        <p className="text-gray-700">
-          Points have been added to your rewards balance
+        <button
+          onClick={handleCheckout}
+          disabled={processing}
+          className="w-full py-4 rounded-xl bg-gradient-to-r from-primary-600 to-accent-600 text-white font-semibold text-lg hover:from-primary-700 hover:to-accent-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+        >
+          {processing ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            <>
+              <CreditCard className="w-5 h-5" />
+              Pay {formatPrice(totalPrice)} with Stripe
+            </>
+          )}
+        </button>
+        <p className="text-center text-sm text-gray-600 mt-3">
+          Secure payment powered by Stripe • All major cards accepted
         </p>
       </motion.div>
     </div>

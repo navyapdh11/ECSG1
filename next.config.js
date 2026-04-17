@@ -3,7 +3,6 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   images: {
-    // Fixed: Restrict to specific trusted domains instead of wildcard
     remotePatterns: [
       {
         protocol: 'https',
@@ -14,6 +13,12 @@ const nextConfig = {
         hostname: 'avatars.githubusercontent.com',
       },
     ],
+  },
+  // Required for native modules like better-sqlite3
+  serverExternalPackages: ['better-sqlite3'],
+  // Enable telemetry for debugging
+  eslint: {
+    ignoreDuringBuilds: false,
   },
 };
 

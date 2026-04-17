@@ -1,4 +1,12 @@
 {
   "name": "ecsg1",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "build": {
+    "env": {
+      "STRIPE_SECRET_KEY": "sk_test_build_placeholder",
+      "STRIPE_WEBHOOK_SECRET": "whsec_build_placeholder",
+      "RESEND_API_KEY": "re_build_placeholder"
+    }
+  }
 }
