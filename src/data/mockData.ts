@@ -1,0 +1,197 @@
+import type { Service, PricingTier, Achievement, Reward } from '@/types';
+
+export const mockServices: Service[] = [
+  {
+    id: 'regular-clean',
+    name: 'Regular Cleaning',
+    description: 'Standard home cleaning service including dusting, vacuuming, and mopping',
+    price: 99,
+    duration: 120,
+    category: 'regular-cleaning',
+  },
+  {
+    id: 'deep-clean',
+    name: 'Deep Cleaning',
+    description: 'Thorough cleaning of all areas including hard-to-reach spots',
+    price: 199,
+    duration: 240,
+    category: 'deep-cleaning',
+  },
+  {
+    id: 'move-in-out',
+    name: 'Move In/Out Cleaning',
+    description: 'Complete cleaning for property transitions',
+    price: 249,
+    duration: 300,
+    category: 'move-in-out',
+  },
+  {
+    id: 'office-clean',
+    name: 'Office Cleaning',
+    description: 'Professional office and workspace cleaning',
+    price: 149,
+    duration: 180,
+    category: 'office-cleaning',
+  },
+  {
+    id: 'carpet-clean',
+    name: 'Carpet Cleaning',
+    description: 'Deep carpet cleaning with steam and shampoo',
+    price: 179,
+    duration: 150,
+    category: 'carpet-cleaning',
+  },
+  {
+    id: 'window-clean',
+    name: 'Window Cleaning',
+    description: 'Interior and exterior window cleaning',
+    price: 129,
+    duration: 90,
+    category: 'window-cleaning',
+  },
+];
+
+export const mockPricingTiers: PricingTier[] = [
+  {
+    id: 'basic',
+    name: 'Basic',
+    description: 'Perfect for regular maintenance cleaning',
+    price: 99,
+    period: 'one-time',
+    color: 'primary',
+    features: [
+      { text: '2 hours of cleaning', included: true },
+      { text: '1 professional cleaner', included: true },
+      { text: 'Basic supplies included', included: true },
+      { text: 'Kitchen & bathrooms', included: true },
+      { text: 'Deep cleaning', included: false },
+      { text: 'Inside appliances', included: false },
+    ],
+  },
+  {
+    id: 'premium',
+    name: 'Premium',
+    description: 'Our most popular comprehensive cleaning package',
+    price: 199,
+    period: 'one-time',
+    color: 'accent',
+    isPopular: true,
+    features: [
+      { text: '4 hours of cleaning', included: true },
+      { text: '2 professional cleaners', included: true },
+      { text: 'Premium eco-friendly supplies', included: true },
+      { text: 'All rooms included', included: true },
+      { text: 'Deep cleaning', included: true },
+      { text: 'Inside appliances', included: false },
+    ],
+  },
+  {
+    id: 'enterprise',
+    name: 'Enterprise',
+    description: 'Complete cleaning solution for offices and large spaces',
+    price: 349,
+    period: 'one-time',
+    color: 'success',
+    features: [
+      { text: '8 hours of cleaning', included: true },
+      { text: '3+ professional cleaners', included: true },
+      { text: 'Premium eco-friendly supplies', included: true },
+      { text: 'All rooms & areas included', included: true },
+      { text: 'Deep cleaning', included: true },
+      { text: 'Inside appliances & windows', included: true },
+    ],
+  },
+];
+
+export const mockAchievements: Achievement[] = [
+  {
+    id: 'first-booking',
+    name: 'First Booking',
+    description: 'Booked your first cleaning service',
+    icon: '🎉',
+    pointsRequired: 10,
+    category: 'first-booking',
+  },
+  {
+    id: 'loyal-customer',
+    name: 'Loyal Customer',
+    description: 'Completed 5 bookings',
+    icon: '⭐',
+    pointsRequired: 50,
+    category: 'loyalty',
+  },
+  {
+    id: 'gold-member',
+    name: 'Gold Member',
+    description: 'Reached Gold tier status',
+    icon: '🏆',
+    pointsRequired: 500,
+    category: 'milestone',
+  },
+  {
+    id: 'referral-master',
+    name: 'Referral Master',
+    description: 'Referred 3 friends',
+    icon: '🤝',
+    pointsRequired: 100,
+    category: 'referral',
+  },
+  {
+    id: 'reviewer',
+    name: 'Top Reviewer',
+    description: 'Left 5 reviews',
+    icon: '💬',
+    pointsRequired: 25,
+    category: 'review',
+  },
+  {
+    id: 'diamond-elite',
+    name: 'Diamond Elite',
+    description: 'Reached the highest tier - Diamond',
+    icon: '💎',
+    pointsRequired: 5000,
+    category: 'milestone',
+  },
+];
+
+export const mockRewards: Reward[] = [
+  {
+    id: 'discount-10',
+    name: '10% Discount',
+    description: 'Get 10% off your next booking',
+    pointsCost: 50,
+    discount: 10,
+    validUntil: new Date('2026-12-31'),
+    isActive: true,
+  },
+  {
+    id: 'discount-20',
+    name: '20% Discount',
+    description: 'Get 20% off your next booking',
+    pointsCost: 100,
+    discount: 20,
+    validUntil: new Date('2026-12-31'),
+    isActive: true,
+  },
+  {
+    id: 'free-add-on',
+    name: 'Free Add-On Service',
+    description: 'Get a free add-on with your next booking',
+    pointsCost: 75,
+    validUntil: new Date('2026-12-31'),
+    isActive: true,
+  },
+  {
+    id: 'priority-booking',
+    name: 'Priority Booking',
+    description: 'Skip the line with priority scheduling',
+    pointsCost: 150,
+    validUntil: new Date('2026-12-31'),
+    isActive: true,
+  },
+];
+
+export const timeSlots = [
+  '08:00', '09:00', '10:00', '11:00', '12:00',
+  '13:00', '14:00', '15:00', '16:00', '17:00',
+];
