@@ -8,6 +8,9 @@ import type {
   Service,
 } from '@/types';
 
+// Shared step constant (used by both store and StepWizard)
+export const BOOKING_STEPS: BookingStep[] = ['services', 'date-time', 'details', 'confirmation'];
+
 interface BookingStore {
   // State
   currentStep: BookingStep;
@@ -54,19 +57,17 @@ export const useBookingStore = create<BookingStore>()(
       
       nextStep: () => {
         const { currentStep } = get();
-        const steps: BookingStep[] = ['services', 'date-time', 'details', 'confirmation'];
-        const currentIndex = steps.indexOf(currentStep);
-        if (currentIndex < steps.length - 1) {
-          set({ currentStep: steps[currentIndex + 1] });
+        const currentIndex = BOOKING_STEPS.indexOf(currentStep);
+        if (currentIndex < BOOKING_STEPS.length - 1) {
+          set({ currentStep: BOOKING_STEPS[currentIndex + 1] });
         }
       },
       
       previousStep: () => {
         const { currentStep } = get();
-        const steps: BookingStep[] = ['services', 'date-time', 'details', 'confirmation'];
-        const currentIndex = steps.indexOf(currentStep);
+        const currentIndex = BOOKING_STEPS.indexOf(currentStep);
         if (currentIndex > 0) {
-          set({ currentStep: steps[currentIndex - 1] });
+          set({ currentStep: BOOKING_STEPS[currentIndex - 1] });
         }
       },
       
@@ -108,7 +109,10 @@ export const useBookingStore = create<BookingStore>()(
         }
       },
       
-      setDate: (date) => set({ selectedDate: date }),
+      setDate: (date) => {
+        const iso = date instanceof Date ? date.toISOString() : date;
+        set({ selectedDate: new Date(iso) });
+      },
       setTime: (time) => set({ selectedTime: time }),
       setAddress: (address) => set({ address }),
       setSpecialInstructions: (specialInstructions) => set({ specialInstructions }),
@@ -125,7 +129,7 @@ export const useBookingStore = create<BookingStore>()(
           booking: null,
         }),
 
-      // Computed
+      // Computed - memoized selectors
       getTotalPrice: () => {
         const { selectedServices } = get();
         return selectedServices.reduce(
@@ -155,11 +159,18 @@ export const useBookingStore = create<BookingStore>()(
       name: 'booking-storage',
       partialize: (state) => ({
         selectedServices: state.selectedServices,
-        selectedDate: state.selectedDate,
+        // Store date as ISO string for proper serialization
+        selectedDate: state.selectedDate ? state.selectedDate.toISOString() : null,
         selectedTime: state.selectedTime,
         address: state.address,
         specialInstructions: state.specialInstructions,
       }),
+      // Rehydrate Date objects on load
+      onRehydrateStorage: () => (state) => {
+        if (state && state.selectedDate && typeof state.selectedDate === 'string') {
+          state.selectedDate = new Date(state.selectedDate);
+        }
+      },
     }
   )
 );

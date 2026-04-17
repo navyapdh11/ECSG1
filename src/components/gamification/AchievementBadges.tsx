@@ -6,7 +6,8 @@ import { useGamificationStore } from '@/store/gamificationStore';
 import { mockAchievements } from '@/data/mockData';
 
 export function AchievementBadges() {
-  const { achievements, unlockAchievement } = useGamificationStore();
+  const { achievements, unlockAchievement, userPoints } = useGamificationStore();
+  const lifetimePoints = userPoints?.lifetimePoints ?? 0;
 
   return (
     <div className="space-y-4">
@@ -17,8 +18,7 @@ export function AchievementBadges() {
           const isUnlocked = achievements.some(
             (a) => a.id === achievement.id && a.unlockedAt
           );
-          const userPoints = useGamificationStore.getState().userPoints;
-          const canUnlock = userPoints && userPoints.lifetimePoints >= achievement.pointsRequired;
+          const canUnlock = lifetimePoints >= achievement.pointsRequired;
 
           return (
             <motion.div
@@ -39,9 +39,20 @@ export function AchievementBadges() {
                   unlockAchievement(achievement.id);
                 }
               }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  if (canUnlock && !isUnlocked) {
+                    unlockAchievement(achievement.id);
+                  }
+                }
+              }}
+              tabIndex={canUnlock && !isUnlocked ? 0 : undefined}
+              role={canUnlock && !isUnlocked ? 'button' : undefined}
+              aria-label={`${achievement.name}: ${isUnlocked ? 'Unlocked' : `${achievement.pointsRequired} points required`}`}
             >
               {/* Icon */}
-              <div className="text-4xl mb-3 text-center">{achievement.icon}</div>
+              <div className="text-4xl mb-3 text-center" aria-hidden="true">{achievement.icon}</div>
               
               {/* Name */}
               <h4 className="font-semibold text-gray-900 text-center mb-1">
@@ -57,12 +68,12 @@ export function AchievementBadges() {
               <div className="text-center">
                 {isUnlocked ? (
                   <div className="inline-flex items-center gap-1 text-xs font-medium text-primary-600">
-                    <Check className="w-3 h-3" />
+                    <Check className="w-3 h-3" aria-hidden="true" />
                     <span>Unlocked!</span>
                   </div>
                 ) : (
                   <div className="inline-flex items-center gap-1 text-xs font-medium text-gray-600">
-                    <Lock className="w-3 h-3" />
+                    <Lock className="w-3 h-3" aria-hidden="true" />
                     <span>{achievement.pointsRequired} pts</span>
                   </div>
                 )}
@@ -74,6 +85,7 @@ export function AchievementBadges() {
                   className="absolute -top-2 -right-2 bg-warning-500 text-white text-xs font-bold px-2 py-1 rounded-full"
                   animate={{ scale: [1, 1.1, 1] }}
                   transition={{ duration: 1, repeat: Infinity }}
+                  aria-hidden="true"
                 >
                   Click!
                 </motion.div>

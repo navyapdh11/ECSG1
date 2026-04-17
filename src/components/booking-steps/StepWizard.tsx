@@ -2,43 +2,53 @@
 
 import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
-import { useBookingStore } from '@/store/bookingStore';
+import { useBookingStore, BOOKING_STEPS } from '@/store/bookingStore';
 import type { BookingStep } from '@/types';
 
-const steps: { key: BookingStep; label: string; number: number }[] = [
-  { key: 'services', label: 'Select Services', number: 1 },
-  { key: 'date-time', label: 'Date & Time', number: 2 },
-  { key: 'details', label: 'Your Details', number: 3 },
-  { key: 'confirmation', label: 'Confirmation', number: 4 },
-];
+const stepLabels: Record<BookingStep, string> = {
+  'services': 'Select Services',
+  'date-time': 'Date & Time',
+  'details': 'Your Details',
+  'confirmation': 'Confirmation',
+};
 
-export function BookingStepWizard() {
+export function BookingStepWizard({ onNext }: { onNext?: () => void }) {
   const { currentStep, nextStep, previousStep, canProceed } = useBookingStore();
-  const currentIndex = steps.findIndex((s) => s.key === currentStep);
+  const currentIndex = BOOKING_STEPS.indexOf(currentStep);
+  const progressPercent = (currentIndex / (BOOKING_STEPS.length - 1)) * 100;
+
+  const handleNext = () => {
+    if (onNext) {
+      onNext();
+    } else {
+      if (canProceed()) nextStep();
+    }
+  };
 
   return (
     <div className="mb-8">
       {/* Progress Bar */}
-      <div className="relative mb-8">
+      <div className="relative mb-8" role="progressbar" aria-valuenow={currentIndex + 1} aria-valuemin={1} aria-valuemax={BOOKING_STEPS.length}>
         {/* Background line */}
-        <div className="absolute top-1/2 left-0 right-0 h-1 bg-gray-200 -translate-y-1/2 rounded-full" />
+        <div className="absolute top-1/2 left-0 right-0 h-1 bg-gray-200 -translate-y-1/2 rounded-full" aria-hidden="true" />
         
         {/* Progress line */}
         <motion.div
           className="absolute top-1/2 left-0 h-1 bg-primary-600 -translate-y-1/2 rounded-full"
           initial={{ width: '0%' }}
-          animate={{ width: `${(currentIndex / (steps.length - 1)) * 100}%` }}
+          animate={{ width: `${progressPercent}%` }}
           transition={{ duration: 0.3 }}
+          aria-hidden="true"
         />
 
         {/* Steps */}
         <div className="relative flex justify-between">
-          {steps.map((step, index) => {
+          {BOOKING_STEPS.map((step, index) => {
             const isCompleted = index < currentIndex;
             const isCurrent = index === currentIndex;
             
             return (
-              <div key={step.key} className="flex flex-col items-center gap-2">
+              <div key={step} className="flex flex-col items-center gap-2">
                 <motion.div
                   className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
                     isCompleted
@@ -49,15 +59,16 @@ export function BookingStepWizard() {
                   }`}
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
+                  aria-current={isCurrent ? 'step' : undefined}
                 >
-                  {isCompleted ? <Check className="w-5 h-5" /> : step.number}
+                  {isCompleted ? <Check className="w-5 h-5" /> : index + 1}
                 </motion.div>
                 <span
                   className={`text-xs font-medium hidden sm:block ${
                     isCurrent ? 'text-primary-600' : 'text-gray-500'
                   }`}
                 >
-                  {step.label}
+                  {stepLabels[step]}
                 </span>
               </div>
             );
@@ -75,9 +86,9 @@ export function BookingStepWizard() {
           Previous
         </button>
         
-        {currentIndex < steps.length - 1 && (
+        {currentIndex < BOOKING_STEPS.length - 1 && (
           <button
-            onClick={nextStep}
+            onClick={handleNext}
             disabled={!canProceed()}
             className="px-6 py-2 rounded-lg font-medium bg-primary-600 text-white hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >

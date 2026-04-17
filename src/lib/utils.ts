@@ -12,18 +12,26 @@ export function formatPrice(price: number): string {
   }).format(price);
 }
 
-export function formatDate(date: Date): string {
+export function formatDate(date: Date | string): string {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  if (isNaN(dateObj.getTime())) return 'Invalid date';
   return new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-  }).format(date);
+  }).format(dateObj);
 }
 
 export function formatTime(time: string): string {
-  const [hours, minutes] = time.split(':');
-  const hour = parseInt(hours, 10);
-  const ampm = hour >= 12 ? 'PM' : 'AM';
-  const displayHour = hour % 12 || 12;
+  // Validate input format HH:mm
+  const match = time.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return 'Invalid time';
+  
+  const [, hoursStr, minutes] = match;
+  const hours = parseInt(hoursStr, 10);
+  if (hours < 0 || hours > 23) return 'Invalid time';
+  
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const displayHour = hours % 12 || 12;
   return `${displayHour}:${minutes} ${ampm}`;
 }

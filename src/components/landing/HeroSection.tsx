@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, ArrowRight, Shield, Clock, Leaf } from 'lucide-react';
 import Link from 'next/link';
@@ -22,36 +23,48 @@ const features = [
   },
 ];
 
+// Fixed: Pre-compute particle data once using useMemo
+function useParticleData() {
+  return useMemo(() => {
+    return Array.from({ length: 20 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 1200,
+      y: Math.random() * 800,
+      scale: Math.random() * 0.5 + 0.5,
+      width: Math.random() * 100 + 50,
+      height: Math.random() * 100 + 50,
+      duration: Math.random() * 10 + 10,
+      delay: Math.random() * 5,
+    }));
+  }, []);
+}
+
 export function HeroSection() {
+  const particles = useParticleData();
+
   return (
     <section
       id="hero"
       className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-accent-700"
     >
-      {/* Animated Background Particles */}
-      <div className="absolute inset-0 overflow-hidden">
-        {[...Array(20)].map((_, i) => (
+      {/* Animated Background Particles - Fixed: stable positions + a11y */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+        {particles.map((p) => (
           <motion.div
-            key={i}
+            key={p.id}
             className="absolute rounded-full bg-white/10"
-            initial={{
-              x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1200),
-              y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800),
-              scale: Math.random() * 0.5 + 0.5,
-            }}
+            initial={{ x: p.x, y: p.y, scale: p.scale }}
             animate={{
-              y: [null, Math.random() * -100],
-              x: [null, Math.random() * 50 - 25],
+              y: [p.y, p.y - 100],
+              x: [p.x, p.x + (Math.random() * 50 - 25)],
             }}
             transition={{
-              duration: Math.random() * 10 + 10,
+              duration: p.duration,
               repeat: Infinity,
               repeatType: 'reverse',
+              delay: p.delay,
             }}
-            style={{
-              width: Math.random() * 100 + 50,
-              height: Math.random() * 100 + 50,
-            }}
+            style={{ width: p.width, height: p.height }}
           />
         ))}
       </div>
@@ -65,7 +78,7 @@ export function HeroSection() {
             transition={{ delay: 0.2 }}
             className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 backdrop-blur-sm rounded-full mb-8"
           >
-            <Sparkles className="w-5 h-5" />
+            <Sparkles className="w-5 h-5" aria-hidden="true" />
             <span className="text-sm font-medium">AI-Powered Cleaning Services</span>
           </motion.div>
 
@@ -106,7 +119,7 @@ export function HeroSection() {
               className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-primary-700 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-all shadow-lg hover:shadow-xl"
             >
               Book Now
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight className="w-5 h-5" aria-hidden="true" />
             </Link>
             <Link
               href="#pricing"
@@ -123,11 +136,11 @@ export function HeroSection() {
             transition={{ delay: 0.6 }}
             className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-3xl mx-auto"
           >
-            {features.map((feature, index) => {
+            {features.map((feature) => {
               const Icon = feature.icon;
               return (
-                <div key={index} className="text-center">
-                  <div className="inline-flex p-3 bg-white/10 backdrop-blur-sm rounded-lg mb-3">
+                <div key={feature.title} className="text-center">
+                  <div className="inline-flex p-3 bg-white/10 backdrop-blur-sm rounded-lg mb-3" aria-hidden="true">
                     <Icon className="w-8 h-8" />
                   </div>
                   <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
@@ -144,6 +157,7 @@ export function HeroSection() {
         className="absolute bottom-8 left-1/2 -translate-x-1/2"
         animate={{ y: [0, 10, 0] }}
         transition={{ duration: 1.5, repeat: Infinity }}
+        aria-hidden="true"
       >
         <div className="w-6 h-10 border-2 border-white/50 rounded-full flex justify-center pt-2">
           <div className="w-1 h-3 bg-white/50 rounded-full" />

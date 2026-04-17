@@ -4,8 +4,55 @@ import { motion } from 'framer-motion';
 import { Check, Star } from 'lucide-react';
 import { mockPricingTiers } from '@/data/mockData';
 import { formatPrice } from '@/lib/utils';
+import { useBookingStore } from '@/store/bookingStore';
+
+// Fixed: Hoisted outside component to avoid recreation
+const COLOR_CONFIG = {
+  primary: {
+    bg: 'bg-primary-50',
+    border: 'border-primary-200',
+    button: 'bg-primary-600 hover:bg-primary-700',
+    badge: 'bg-primary-600',
+  },
+  accent: {
+    bg: 'bg-accent-50',
+    border: 'border-accent-200',
+    button: 'bg-accent-600 hover:bg-accent-700',
+    badge: 'bg-accent-600',
+  },
+  success: {
+    bg: 'bg-success-50',
+    border: 'border-success-200',
+    button: 'bg-success-600 hover:bg-success-700',
+    badge: 'bg-success-600',
+  },
+} as const;
 
 export function PricingTiers() {
+  const { addService, setStep } = useBookingStore();
+
+  const handleGetStarted = (tierId: string) => {
+    // Map tier to a service and navigate to booking
+    const serviceMap: Record<string, string> = {
+      basic: 'regular-clean',
+      premium: 'deep-clean',
+      enterprise: 'move-in-out',
+    };
+    const serviceId = serviceMap[tierId];
+    const mockServices = [
+      { id: 'regular-clean', name: 'Regular Cleaning', description: 'Standard home cleaning', price: 99, duration: 120, category: 'regular-cleaning' as const },
+      { id: 'deep-clean', name: 'Deep Cleaning', description: 'Thorough cleaning', price: 199, duration: 240, category: 'deep-cleaning' as const },
+      { id: 'move-in-out', name: 'Move In/Out Cleaning', description: 'Complete property transition cleaning', price: 249, duration: 300, category: 'move-in-out' as const },
+    ];
+    const service = mockServices.find((s) => s.id === serviceId);
+    if (service) {
+      addService(service);
+      setStep('date-time');
+    }
+    // Scroll to booking section
+    document.getElementById('booking')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <div className="space-y-8">
       <div className="text-center">
@@ -17,28 +64,7 @@ export function PricingTiers() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {mockPricingTiers.map((tier, index) => {
-          const colorClasses = {
-            primary: {
-              bg: 'bg-primary-50',
-              border: 'border-primary-200',
-              button: 'bg-primary-600 hover:bg-primary-700',
-              badge: 'bg-primary-600',
-            },
-            accent: {
-              bg: 'bg-accent-50',
-              border: 'border-accent-200',
-              button: 'bg-accent-600 hover:bg-accent-700',
-              badge: 'bg-accent-600',
-            },
-            success: {
-              bg: 'bg-success-50',
-              border: 'border-success-200',
-              button: 'bg-success-600 hover:bg-success-700',
-              badge: 'bg-success-600',
-            },
-          };
-
-          const colors = colorClasses[tier.color as keyof typeof colorClasses];
+          const colors = COLOR_CONFIG[tier.color as keyof typeof COLOR_CONFIG];
 
           return (
             <motion.div
@@ -61,7 +87,7 @@ export function PricingTiers() {
                   <div
                     className={`flex items-center gap-2 px-4 py-2 ${colors.badge} text-white rounded-full text-sm font-semibold shadow-lg`}
                   >
-                    <Star className="w-4 h-4" />
+                    <Star className="w-4 h-4" aria-hidden="true" />
                     Most Popular
                   </div>
                 </motion.div>
@@ -91,6 +117,7 @@ export function PricingTiers() {
                           ? 'bg-primary-600'
                           : 'bg-gray-300'
                       }`}
+                      aria-hidden="true"
                     >
                       <Check
                         className={`w-3 h-3 ${
@@ -109,8 +136,9 @@ export function PricingTiers() {
                 ))}
               </ul>
 
-              {/* CTA Button */}
+              {/* CTA Button - Fixed: now functional */}
               <button
+                onClick={() => handleGetStarted(tier.id)}
                 className={`w-full py-3 rounded-lg font-semibold text-white transition-all ${colors.button}`}
               >
                 Get Started

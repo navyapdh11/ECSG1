@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type { ChatMessage, ChatIntent } from '@/types';
 
 interface ChatStore {
@@ -22,41 +23,52 @@ interface ChatStore {
   getMessagesByRole: (role: 'user' | 'assistant' | 'system') => ChatMessage[];
 }
 
-export const useChatStore = create<ChatStore>()((set, get) => ({
-  // Initial state
-  messages: [],
-  isTyping: false,
-  isOpen: false,
-  currentIntent: null,
+export const useChatStore = create<ChatStore>()(
+  persist(
+    (set, get) => ({
+      // Initial state
+      messages: [],
+      isTyping: false,
+      isOpen: false,
+      currentIntent: null,
 
-  // Actions
-  addMessage: (message) => {
-    const { messages } = get();
-    set({ messages: [...messages, message] });
-  },
+      // Actions
+      addMessage: (message) => {
+        const { messages } = get();
+        set({ messages: [...messages, message] });
+      },
 
-  setTyping: (isTyping) => set({ isTyping }),
+      setTyping: (isTyping) => set({ isTyping }),
 
-  toggleChat: () => {
-    const { isOpen } = get();
-    set({ isOpen: !isOpen });
-  },
+      toggleChat: () => {
+        const { isOpen } = get();
+        set({ isOpen: !isOpen });
+      },
 
-  openChat: () => set({ isOpen: true }),
-  closeChat: () => set({ isOpen: false }),
+      openChat: () => set({ isOpen: true }),
+      closeChat: () => set({ isOpen: false }),
 
-  setIntent: (intent) => set({ currentIntent: intent }),
+      setIntent: (intent) => set({ currentIntent: intent }),
 
-  clearChat: () => set({ messages: [], currentIntent: null }),
+      clearChat: () => set({ messages: [], currentIntent: null }),
 
-  // Computed
-  getLastMessage: () => {
-    const { messages } = get();
-    return messages[messages.length - 1];
-  },
+      // Computed
+      getLastMessage: () => {
+        const { messages } = get();
+        return messages[messages.length - 1];
+      },
 
-  getMessagesByRole: (role) => {
-    const { messages } = get();
-    return messages.filter((m) => m.role === role);
-  },
-}));
+      getMessagesByRole: (role) => {
+        const { messages } = get();
+        return messages.filter((m) => m.role === role);
+      },
+    }),
+    {
+      name: 'chat-storage',
+      partialize: (state) => ({
+        messages: state.messages.slice(-50), // Keep last 50 messages
+        currentIntent: state.currentIntent,
+      }),
+    }
+  )
+);

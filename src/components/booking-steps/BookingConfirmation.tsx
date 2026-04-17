@@ -1,13 +1,33 @@
 'use client';
 
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, Calendar, Clock, MapPin, DollarSign, FileText } from 'lucide-react';
 import { useBookingStore } from '@/store/bookingStore';
 import { formatPrice, formatDate, formatTime } from '@/lib/utils';
+import { useGamificationStore } from '@/store/gamificationStore';
 
 export function BookingConfirmation() {
   const { selectedServices, selectedDate, selectedTime, address, specialInstructions, getTotalPrice } =
     useBookingStore();
+  const { addPoints } = useGamificationStore();
+
+  // Award points on confirmation mount
+  useEffect(() => {
+    const points = Math.floor(getTotalPrice() / 10);
+    if (points > 0) {
+      addPoints(points);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Safety: handle missing data
+  if (selectedServices.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-600">No booking data found. Please start a new booking.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -17,7 +37,7 @@ export function BookingConfirmation() {
         animate={{ opacity: 1, scale: 1 }}
         className="text-center p-8 bg-gradient-to-br from-primary-50 to-accent-50 rounded-xl"
       >
-        <CheckCircle className="w-16 h-16 text-primary-600 mx-auto mb-4" />
+        <CheckCircle className="w-16 h-16 text-primary-600 mx-auto mb-4" aria-hidden="true" />
         <h2 className="text-3xl font-bold text-gray-900 mb-2">Booking Confirmed! 🎉</h2>
         <p className="text-gray-600">
           Your cleaning service has been successfully booked
@@ -29,7 +49,7 @@ export function BookingConfirmation() {
         {/* Service Details */}
         <div className="p-6 bg-white rounded-xl border-2 border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-primary-600" />
+            <FileText className="w-5 h-5 text-primary-600" aria-hidden="true" />
             Service Details
           </h3>
           <div className="space-y-3">
@@ -53,13 +73,13 @@ export function BookingConfirmation() {
         {/* Date & Time */}
         <div className="p-6 bg-white rounded-xl border-2 border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-primary-600" />
+            <Calendar className="w-5 h-5 text-primary-600" aria-hidden="true" />
             Schedule
           </h3>
           <div className="space-y-3">
             {selectedDate && (
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <Calendar className="w-5 h-5 text-primary-600" />
+                <Calendar className="w-5 h-5 text-primary-600 flex-shrink-0" aria-hidden="true" />
                 <div>
                   <p className="text-sm text-gray-600">Date</p>
                   <p className="font-medium text-gray-900">{formatDate(selectedDate)}</p>
@@ -68,7 +88,7 @@ export function BookingConfirmation() {
             )}
             {selectedTime && (
               <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <Clock className="w-5 h-5 text-primary-600" />
+                <Clock className="w-5 h-5 text-primary-600 flex-shrink-0" aria-hidden="true" />
                 <div>
                   <p className="text-sm text-gray-600">Time</p>
                   <p className="font-medium text-gray-900">{formatTime(selectedTime)}</p>
@@ -79,23 +99,27 @@ export function BookingConfirmation() {
         </div>
 
         {/* Address */}
-        <div className="p-6 bg-white rounded-xl border-2 border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-primary-600" />
-            Location
-          </h3>
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <p className="text-gray-900">{address.street}</p>
-            <p className="text-gray-900">
-              {address.city}, {address.state} {address.zipCode}
-            </p>
+        {(address.street || address.city) && (
+          <div className="p-6 bg-white rounded-xl border-2 border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-primary-600" aria-hidden="true" />
+              Location
+            </h3>
+            <div className="p-3 bg-gray-50 rounded-lg">
+              {address.street && <p className="text-gray-900">{address.street}</p>}
+              {(address.city || address.state || address.zipCode) && (
+                <p className="text-gray-900">
+                  {address.city}{address.city && address.state ? ', ' : ''}{address.state} {address.zipCode}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Total Price */}
         <div className="p-6 bg-gradient-to-br from-primary-600 to-primary-700 text-white rounded-xl">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <DollarSign className="w-5 h-5" />
+            <DollarSign className="w-5 h-5" aria-hidden="true" />
             Payment Summary
           </h3>
           <div className="space-y-2 mb-4">
@@ -132,7 +156,9 @@ export function BookingConfirmation() {
         transition={{ delay: 0.5 }}
         className="p-6 bg-gradient-to-br from-accent-50 to-primary-50 rounded-xl text-center"
       >
-        <p className="text-2xl font-bold text-accent-600 mb-2">+{Math.floor(getTotalPrice() / 10)} Points Earned! 🎮</p>
+        <p className="text-2xl font-bold text-accent-600 mb-2">
+          +{Math.floor(getTotalPrice() / 10)} Points Earned! 🎮
+        </p>
         <p className="text-gray-700">
           Points have been added to your rewards balance
         </p>

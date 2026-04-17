@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useBookingStore } from '@/store/bookingStore';
 import { timeSlots } from '@/data/mockData';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, formatTime } from '@/lib/utils';
 import {
   format,
   addMonths,
@@ -13,21 +13,27 @@ import {
   startOfMonth,
   endOfMonth,
   eachDayOfInterval,
-  isSameDay,
   isToday,
   isPast,
 } from 'date-fns';
 
 export function DateTimePicker() {
   const { selectedDate, selectedTime, setDate, setTime, getTotalPrice } = useBookingStore();
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(() => new Date());
 
-  const days = eachDayOfInterval({
-    start: startOfMonth(currentMonth),
-    end: endOfMonth(currentMonth),
-  });
+  const days = useMemo(
+    () =>
+      eachDayOfInterval({
+        start: startOfMonth(currentMonth),
+        end: endOfMonth(currentMonth),
+      }),
+    [currentMonth]
+  );
 
-  const availableDates = days.filter((day) => !isPast(day) || isToday(day));
+  const availableDates = useMemo(
+    () => days.filter((day) => !isPast(day) || isToday(day)),
+    [days]
+  );
 
   return (
     <div className="space-y-6">
@@ -48,7 +54,7 @@ export function DateTimePicker() {
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-lg font-semibold text-gray-900" aria-live="polite">
               {format(currentMonth, 'MMMM yyyy')}
             </h3>
             <button
@@ -61,25 +67,26 @@ export function DateTimePicker() {
           </div>
 
           {/* Days of Week */}
-          <div className="grid grid-cols-7 gap-1 mb-2">
+          <div className="grid grid-cols-7 gap-1 mb-2" role="row">
             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-              <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
+              <div key={day} className="text-center text-sm font-medium text-gray-500 py-2" role="columnheader">
                 {day}
               </div>
             ))}
           </div>
 
           {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-1">
+          <div className="grid grid-cols-7 gap-1" role="grid" aria-label="Calendar">
             {/* Empty cells for days before month starts */}
             {Array.from({ length: startOfMonth(currentMonth).getDay() }).map((_, i) => (
-              <div key={`empty-${i}`} />
+              <div key={`empty-${i}`} role="gridcell" aria-hidden="true" />
             ))}
 
             {days.map((day) => {
-              const isAvailable = availableDates.some((d) => isSameDay(d, day));
-              const isSelected = selectedDate && isSameDay(day, selectedDate);
+              const isAvailable = availableDates.some((d) => d.getTime() === day.getTime());
+              const isSelected = selectedDate && new Date(selectedDate).getTime() === day.getTime();
               const disabled = !isAvailable;
+              const isTodayDate = isToday(day);
 
               return (
                 <button
@@ -89,10 +96,13 @@ export function DateTimePicker() {
                   className={`p-2 rounded-lg text-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${
                     isSelected
                       ? 'bg-primary-600 text-white font-semibold'
-                      : isToday(day)
+                      : isTodayDate
                       ? 'bg-primary-100 text-primary-700 font-medium'
                       : 'hover:bg-gray-100 text-gray-700'
                   }`}
+                  role="gridcell"
+                  aria-selected={isSelected || undefined}
+                  aria-disabled={disabled}
                 >
                   {format(day, 'd')}
                 </button>
@@ -104,7 +114,7 @@ export function DateTimePicker() {
         {/* Time Slots */}
         <div className="p-6 bg-white rounded-xl border-2 border-gray-200">
           <div className="flex items-center gap-2 mb-4">
-            <Clock className="w-5 h-5 text-primary-600" />
+            <Clock className="w-5 h-5 text-primary-600" aria-hidden="true" />
             <h3 className="text-lg font-semibold text-gray-900">Available Time Slots</h3>
           </div>
 
@@ -121,15 +131,16 @@ export function DateTimePicker() {
                         ? 'bg-primary-600 text-white shadow-lg'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
+                    aria-pressed={isSelected}
                   >
-                    {format(new Date(`2000-01-01T${time}`), 'h:mm a')}
+                    {formatTime(time)}
                   </button>
                 );
               })}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-              <CalendarIcon className="w-12 h-12 mb-4 opacity-50" />
+              <CalendarIcon className="w-12 h-12 mb-4 opacity-50" aria-hidden="true" />
               <p className="text-center">Please select a date first</p>
             </div>
           )}
@@ -147,8 +158,7 @@ export function DateTimePicker() {
             <div>
               <h4 className="text-lg font-semibold text-gray-900">Selected Date & Time</h4>
               <p className="text-gray-700">
-                {format(selectedDate, 'EEEE, MMMM d, yyyy')} at{' '}
-                {format(new Date(`2000-01-01T${selectedTime}`), 'h:mm a')}
+                {format(new Date(selectedDate), 'EEEE, MMMM d, yyyy')} at {formatTime(selectedTime)}
               </p>
             </div>
             <div className="text-right">

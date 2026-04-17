@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef, useCallback } from 'react';
 import { BookingStepWizard } from './StepWizard';
 import { ServiceSelection } from './ServiceSelection';
 import { DateTimePicker } from './DateTimePicker';
@@ -8,7 +9,25 @@ import { BookingConfirmation } from './BookingConfirmation';
 import { useBookingStore } from '@/store/bookingStore';
 
 export function BookingForm() {
-  const { currentStep } = useBookingStore();
+  const { currentStep, nextStep, canProceed } = useBookingStore();
+  const formSubmitRef = useRef<(() => boolean) | null>(null);
+
+  // Callback for BookingDetails to register its submit handler
+  const registerFormSubmit = useCallback((submitFn: () => boolean) => {
+    formSubmitRef.current = submitFn;
+  }, []);
+
+  // Override nextStep to validate form first
+  const handleNext = useCallback(() => {
+    if (currentStep === 'details') {
+      // Trigger form validation before proceeding
+      const isValid = formSubmitRef.current?.();
+      if (!isValid) return;
+    }
+    if (canProceed()) {
+      nextStep();
+    }
+  }, [currentStep, canProceed, nextStep]);
 
   const renderStep = () => {
     switch (currentStep) {
@@ -17,7 +36,7 @@ export function BookingForm() {
       case 'date-time':
         return <DateTimePicker />;
       case 'details':
-        return <BookingDetails />;
+        return <BookingDetails onFormValid={registerFormSubmit} />;
       case 'confirmation':
         return <BookingConfirmation />;
       default:
@@ -39,7 +58,9 @@ export function BookingForm() {
           </div>
 
           <div className="bg-white p-8 rounded-2xl shadow-xl">
-            {currentStep !== 'confirmation' && <BookingStepWizard />}
+            {currentStep !== 'confirmation' && (
+              <BookingStepWizard onNext={handleNext} />
+            )}
             {renderStep()}
           </div>
         </div>

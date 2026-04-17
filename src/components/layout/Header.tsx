@@ -1,7 +1,7 @@
 'use client';
 
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Sparkles, Calendar, Trophy, DollarSign, Home } from 'lucide-react';
 import { useUIStore } from '@/store/uiStore';
@@ -14,14 +14,42 @@ const navItems = [
 ];
 
 export function Header() {
-  const { isMobileMenuOpen, toggleMobileMenu } = useUIStore();
+  const { isMobileMenuOpen, toggleMobileMenu, setMobileMenu } = useUIStore();
   const [scrolled, setScrolled] = useState(false);
 
-  if (typeof window !== 'undefined') {
-    window.addEventListener('scroll', () => {
-      setScrolled(window.scrollY > 20);
+  // Fixed: Throttled scroll handler with cleanup
+  const handleScroll = useCallback(() => {
+    setScrolled((prev) => {
+      const newScrolled = window.scrollY > 20;
+      return newScrolled !== prev ? newScrolled : prev;
     });
-  }
+  }, []);
+
+  useEffect(() => {
+    let ticking = false;
+    const onScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          handleScroll();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [handleScroll]);
+
+  // Close mobile menu on escape key
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isMobileMenuOpen) {
+        setMobileMenu(false);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isMobileMenuOpen, setMobileMenu]);
 
   return (
     <header
@@ -31,16 +59,17 @@ export function Header() {
           : 'bg-transparent'
       }`}
     >
-      <nav className="container mx-auto px-4 py-4">
+      <nav className="container mx-auto px-4 py-4" role="navigation" aria-label="Main navigation">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
+          <Link href="/" className="flex items-center gap-2 group" aria-label="ECSG1 Home">
             <div className="relative">
               <Sparkles className="w-8 h-8 text-primary-600 transition-transform group-hover:rotate-12" />
               <motion.div
                 className="absolute inset-0 w-8 h-8 text-primary-400"
                 animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }}
                 transition={{ duration: 2, repeat: Infinity }}
+                aria-hidden="true"
               >
                 <Sparkles />
               </motion.div>
@@ -62,7 +91,7 @@ export function Header() {
                     scrolled ? 'text-gray-700 hover:text-primary-600' : 'text-white/90 hover:text-white'
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-4 h-4" aria-hidden="true" />
                   <span>{item.label}</span>
                 </Link>
               );
@@ -75,7 +104,8 @@ export function Header() {
             className={`md:hidden p-2 rounded-lg transition-colors ${
               scrolled ? 'text-gray-700 hover:bg-gray-100' : 'text-white hover:bg-white/10'
             }`}
-            aria-label="Toggle menu"
+            aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={isMobileMenuOpen}
           >
             {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
@@ -90,6 +120,7 @@ export function Header() {
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2 }}
               className="md:hidden mt-4 pb-4"
+              role="menu"
             >
               <div className="flex flex-col gap-2">
                 {navItems.map((item) => {
@@ -100,8 +131,9 @@ export function Header() {
                       href={item.href}
                       onClick={toggleMobileMenu}
                       className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-primary-50 hover:text-primary-600 transition-colors"
+                      role="menuitem"
                     >
-                      <Icon className="w-5 h-5" />
+                      <Icon className="w-5 h-5" aria-hidden="true" />
                       <span>{item.label}</span>
                     </Link>
                   );

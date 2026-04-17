@@ -1,13 +1,13 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Plus, Minus, Clock, DollarSign } from 'lucide-react';
+import { Plus, Minus, Clock, DollarSign, Trash2 } from 'lucide-react';
 import { useBookingStore } from '@/store/bookingStore';
 import { mockServices } from '@/data/mockData';
 import { formatPrice } from '@/lib/utils';
 
 export function ServiceSelection() {
-  const { selectedServices, addService, updateServiceQuantity, getTotalPrice } =
+  const { selectedServices, addService, removeService, updateServiceQuantity, getTotalPrice } =
     useBookingStore();
 
   return (
@@ -39,11 +39,11 @@ export function ServiceSelection() {
 
               <div className="flex items-center gap-4 mb-4 text-sm text-gray-600">
                 <div className="flex items-center gap-1">
-                  <Clock className="w-4 h-4" />
+                  <Clock className="w-4 h-4" aria-hidden="true" />
                   <span>{service.duration} min</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <DollarSign className="w-4 h-4" />
+                  <DollarSign className="w-4 h-4" aria-hidden="true" />
                   <span>{formatPrice(service.price)}</span>
                 </div>
               </div>
@@ -53,15 +53,17 @@ export function ServiceSelection() {
                   <button
                     onClick={() => updateServiceQuantity(service.id, quantity - 1)}
                     className="p-2 rounded-lg bg-white hover:bg-gray-100 transition-colors"
-                    aria-label="Decrease quantity"
+                    aria-label={`Decrease ${service.name} quantity`}
                   >
                     <Minus className="w-4 h-4" />
                   </button>
-                  <span className="text-lg font-semibold text-gray-900">{quantity}</span>
+                  <span className="text-lg font-semibold text-gray-900" aria-label={`Quantity: ${quantity}`}>
+                    {quantity}
+                  </span>
                   <button
                     onClick={() => updateServiceQuantity(service.id, quantity + 1)}
                     className="p-2 rounded-lg bg-white hover:bg-gray-100 transition-colors"
-                    aria-label="Increase quantity"
+                    aria-label={`Increase ${service.name} quantity`}
                   >
                     <Plus className="w-4 h-4" />
                   </button>
@@ -72,6 +74,18 @@ export function ServiceSelection() {
                   className="w-full py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors font-medium"
                 >
                   Add to Booking
+                </button>
+              )}
+
+              {/* Remove button when quantity > 1 */}
+              {quantity > 1 && (
+                <button
+                  onClick={() => removeService(service.id)}
+                  className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-lg text-error-600 hover:bg-error-50 transition-colors text-sm"
+                  aria-label={`Remove ${service.name} from booking`}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Remove</span>
                 </button>
               )}
             </motion.div>
