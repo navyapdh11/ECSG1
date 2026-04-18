@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
-import { MapPin, Mail, Phone, User, MessageSquare } from 'lucide-react';
+import { MapPin, Mail, Phone, User, MessageSquare, Check } from 'lucide-react';
 import { useBookingStore } from '@/store/bookingStore';
 
 const detailsSchema = z.object({
@@ -27,11 +27,13 @@ interface BookingDetailsProps {
 
 export function BookingDetails({ onFormValid }: BookingDetailsProps) {
   const { address, setAddress, setSpecialInstructions } = useBookingStore();
+  const [validFields, setValidFields] = useState<Set<string>>(new Set());
 
   const {
     register,
     handleSubmit,
     formState: { errors },
+    watch,
   } = useForm<DetailsForm>({
     resolver: zodResolver(detailsSchema),
     mode: 'onChange',
@@ -47,6 +49,20 @@ export function BookingDetails({ onFormValid }: BookingDetailsProps) {
     },
   });
 
+  // Track valid fields for inline validation - #10
+  const watchedFields = watch();
+  useEffect(() => {
+    const newValid = new Set<string>();
+    const fieldNames: (keyof DetailsForm)[] = ['name', 'email', 'phone', 'street', 'city', 'state', 'zipCode'];
+    fieldNames.forEach((field) => {
+      const value = watchedFields[field];
+      if (value && !errors[field]) {
+        newValid.add(field);
+      }
+    });
+    setValidFields(newValid);
+  }, [watchedFields, errors]);
+
   // Register form submit handler with parent
   useEffect(() => {
     const submitFn = () => {
@@ -59,6 +75,9 @@ export function BookingDetails({ onFormValid }: BookingDetailsProps) {
             state: data.state,
             zipCode: data.zipCode,
             country: 'US',
+            email: data.email,
+            name: data.name,
+            phone: data.phone,
           });
           setSpecialInstructions(data.specialInstructions || '');
         },
@@ -78,9 +97,17 @@ export function BookingDetails({ onFormValid }: BookingDetailsProps) {
       state: data.state,
       zipCode: data.zipCode,
       country: 'US',
+      email: data.email,
+      name: data.name,
+      phone: data.phone,
     });
     setSpecialInstructions(data.specialInstructions || '');
   };
+
+  // Progress tracking - #10
+  const requiredFields = ['name', 'email', 'phone', 'street', 'city', 'state', 'zipCode'];
+  const completedCount = requiredFields.filter((f) => validFields.has(f)).length;
+  const progressPercent = (completedCount / requiredFields.length) * 100;
 
   const inputFields: Array<{
     label: string;
@@ -90,62 +117,13 @@ export function BookingDetails({ onFormValid }: BookingDetailsProps) {
     placeholder: string;
     errorId?: string;
   }> = [
-    {
-      label: 'Full Name',
-      name: 'name',
-      icon: User,
-      type: 'text',
-      placeholder: 'John Doe',
-      errorId: 'name-error',
-    },
-    {
-      label: 'Email Address',
-      name: 'email',
-      icon: Mail,
-      type: 'email',
-      placeholder: 'john@example.com',
-      errorId: 'email-error',
-    },
-    {
-      label: 'Phone Number',
-      name: 'phone',
-      icon: Phone,
-      type: 'tel',
-      placeholder: '+1 (555) 123-4567',
-      errorId: 'phone-error',
-    },
-    {
-      label: 'Street Address',
-      name: 'street',
-      icon: MapPin,
-      type: 'text',
-      placeholder: '123 Main St',
-      errorId: 'street-error',
-    },
-    {
-      label: 'City',
-      name: 'city',
-      icon: MapPin,
-      type: 'text',
-      placeholder: 'San Francisco',
-      errorId: 'city-error',
-    },
-    {
-      label: 'State',
-      name: 'state',
-      icon: MapPin,
-      type: 'text',
-      placeholder: 'CA',
-      errorId: 'state-error',
-    },
-    {
-      label: 'ZIP Code',
-      name: 'zipCode',
-      icon: MapPin,
-      type: 'text',
-      placeholder: '94102',
-      errorId: 'zipCode-error',
-    },
+    { label: 'Full Name', name: 'name', icon: User, type: 'text', placeholder: 'John Doe', errorId: 'name-error' },
+    { label: 'Email Address', name: 'email', icon: Mail, type: 'email', placeholder: 'john@example.com', errorId: 'email-error' },
+    { label: 'Phone Number', name: 'phone', icon: Phone, type: 'tel', placeholder: '+1 (555) 123-4567', errorId: 'phone-error' },
+    { label: 'Street Address', name: 'street', icon: MapPin, type: 'text', placeholder: '123 Main St', errorId: 'street-error' },
+    { label: 'City', name: 'city', icon: MapPin, type: 'text', placeholder: 'Sydney', errorId: 'city-error' },
+    { label: 'State', name: 'state', icon: MapPin, type: 'text', placeholder: 'NSW', errorId: 'state-error' },
+    { label: 'Postcode', name: 'zipCode', icon: MapPin, type: 'text', placeholder: '2000', errorId: 'zipCode-error' },
   ];
 
   return (
@@ -153,6 +131,22 @@ export function BookingDetails({ onFormValid }: BookingDetailsProps) {
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Your Details</h2>
         <p className="text-gray-600">Please provide your contact information and address</p>
+        
+        {/* Progress bar - #10 */}
+        <div className="mt-3">
+          <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+            <span>{completedCount} of {requiredFields.length} fields complete</span>
+            <span>{Math.round(progressPercent)}%</span>
+          </div>
+          <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-gradient-to-r from-success-500 to-primary-500"
+              initial={{ width: 0 }}
+              animate={{ width: `${progressPercent}%` }}
+              transition={{ duration: 0.3 }}
+            />
+          </div>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
@@ -160,6 +154,7 @@ export function BookingDetails({ onFormValid }: BookingDetailsProps) {
           {inputFields.map((field) => {
             const Icon = field.icon;
             const hasError = !!errors[field.name];
+            const isValid = validFields.has(field.name);
             return (
               <div key={field.name}>
                 <label
@@ -175,14 +170,26 @@ export function BookingDetails({ onFormValid }: BookingDetailsProps) {
                     {...register(field.name)}
                     type={field.type}
                     placeholder={field.placeholder}
-                    aria-invalid={hasError}
+                    aria-invalid={hasError || undefined}
                     aria-describedby={hasError ? field.errorId : undefined}
-                    className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 transition-all outline-none ${
+                    className={`w-full pl-10 pr-10 py-3 rounded-lg border-2 transition-all outline-none ${
                       hasError
                         ? 'border-error-500 focus:border-error-600 focus:ring-2 focus:ring-error-200'
+                        : isValid
+                        ? 'border-success-500 focus:border-success-600 focus:ring-2 focus:ring-success-200'
                         : 'border-gray-200 focus:border-primary-600 focus:ring-2 focus:ring-primary-200'
                     }`}
                   />
+                  {/* Inline validation checkmark - #10 */}
+                  {isValid && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                    >
+                      <Check className="w-5 h-5 text-success-500" />
+                    </motion.div>
+                  )}
                 </div>
                 {hasError && (
                   <motion.p

@@ -44,6 +44,9 @@ export interface Address {
   state: string;
   zipCode: string;
   country: string;
+  email?: string;
+  name?: string;
+  phone?: string;
 }
 
 export type BookingStatus = 

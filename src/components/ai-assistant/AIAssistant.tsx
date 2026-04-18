@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, X } from 'lucide-react';
 import { useChatStore } from '@/store/chatStore';
@@ -9,6 +10,13 @@ export function AIAssistant() {
   const { isOpen, toggleChat } = useChatStore();
   const messageCount = useChatStore((s) => s.getMessagesByRole('assistant').length);
   const hasUnread = !isOpen && messageCount === 0;
+  const [isOnline, setIsOnline] = useState(false);
+
+  // Simulate checking online status - #9
+  useEffect(() => {
+    const timer = setTimeout(() => setIsOnline(true), 1000);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
@@ -25,7 +33,7 @@ export function AIAssistant() {
         )}
       </AnimatePresence>
 
-      {/* Toggle Button */}
+      {/* Toggle Button - #9 with availability */}
       <motion.button
         onClick={toggleChat}
         whileHover={{ scale: 1.1 }}
@@ -60,7 +68,14 @@ export function AIAssistant() {
           )}
         </AnimatePresence>
 
-        {/* Notification Badge - Fixed: only show initially */}
+        {/* Availability indicator - #9 */}
+        {!isOpen && (
+          <div className={`absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${
+            isOnline ? 'bg-green-400' : 'bg-gray-400 animate-pulse'
+          }`} />
+        )}
+
+        {/* Notification Badge */}
         {hasUnread && (
           <motion.span
             id="chat-notification-label"

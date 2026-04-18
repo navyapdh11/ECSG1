@@ -8,6 +8,8 @@ interface GamificationStore {
   achievements: Achievement[];
   availableRewards: UserReward[];
   isLoading: boolean;
+  bookingStreak: number;
+  lastBookingDate: string | null;
   
   // Actions
   addPoints: (points: number) => void;
@@ -16,6 +18,7 @@ interface GamificationStore {
   redeemReward: (rewardId: string) => void;
   setUserPoints: (userPoints: UserPoints) => void;
   setLoading: (loading: boolean) => void;
+  recordBooking: () => void;
   
   // Computed
   getLevel: () => UserLevel;
@@ -51,6 +54,8 @@ export const useGamificationStore = create<GamificationStore>()(
       achievements: [],
       availableRewards: [],
       isLoading: false,
+      bookingStreak: 0,
+      lastBookingDate: null,
 
       // Actions
       addPoints: (points) => {
@@ -140,6 +145,20 @@ export const useGamificationStore = create<GamificationStore>()(
 
       setUserPoints: (userPoints) => set({ userPoints }),
       setLoading: (isLoading) => set({ isLoading }),
+      
+      recordBooking: () => {
+        const { lastBookingDate, bookingStreak } = get();
+        const today = new Date().toISOString().split('T')[0];
+        
+        if (lastBookingDate === today) return; // Already booked today
+        
+        const lastDate = lastBookingDate ? new Date(lastBookingDate) : null;
+        const todayDate = new Date(today);
+        const daysDiff = lastDate ? Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)) : 999;
+        
+        const newStreak = daysDiff <= 7 && daysDiff > 0 ? bookingStreak + 1 : 1;
+        set({ bookingStreak: newStreak, lastBookingDate: today });
+      },
 
       // Computed
       getLevel: () => {
@@ -174,6 +193,8 @@ export const useGamificationStore = create<GamificationStore>()(
         userPoints: state.userPoints,
         achievements: state.achievements,
         availableRewards: state.availableRewards,
+        bookingStreak: state.bookingStreak,
+        lastBookingDate: state.lastBookingDate,
       }),
     }
   )

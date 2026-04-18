@@ -31,25 +31,30 @@ const COLOR_CONFIG = {
 export function PricingTiers() {
   const { addService, setStep } = useBookingStore();
 
-  const handleGetStarted = (tierId: string) => {
-    // Map tier to a service and navigate to booking
-    const serviceMap: Record<string, string> = {
-      basic: 'regular-clean',
-      premium: 'deep-clean',
-      enterprise: 'move-in-out',
+  const handleGetStarted = (tierId: string, tierName: string) => {
+    const serviceMap: Record<string, typeof mockPricingTiers[0]> = {
+      basic: mockPricingTiers[0],
+      premium: mockPricingTiers[1],
+      enterprise: mockPricingTiers[2],
     };
-    const serviceId = serviceMap[tierId];
-    const mockServices = [
-      { id: 'regular-clean', name: 'Regular Cleaning', description: 'Standard home cleaning', price: 99, duration: 120, category: 'regular-cleaning' as const },
-      { id: 'deep-clean', name: 'Deep Cleaning', description: 'Thorough cleaning', price: 199, duration: 240, category: 'deep-cleaning' as const },
-      { id: 'move-in-out', name: 'Move In/Out Cleaning', description: 'Complete property transition cleaning', price: 249, duration: 300, category: 'move-in-out' as const },
-    ];
-    const service = mockServices.find((s) => s.id === serviceId);
-    if (service) {
+    const tier = serviceMap[tierId];
+    if (tier) {
+      const service = {
+        id: tierId,
+        name: tier.name,
+        description: tier.description,
+        price: tier.price,
+        duration: tier.features.length * 30,
+        category: 'regular-cleaning' as const,
+      };
       addService(service);
       setStep('date-time');
+      // Custom event for toast - picked up by ToastContainer
+      if (typeof window !== 'undefined') {
+        const evt = new CustomEvent('toast-show', { detail: { message: `✅ ${tierName} added to your booking!`, type: 'success' } });
+        window.dispatchEvent(evt);
+      }
     }
-    // Scroll to booking section
     document.getElementById('booking')?.scrollIntoView({ behavior: 'smooth' });
   };
 
@@ -77,7 +82,6 @@ export function PricingTiers() {
                 tier.isPopular ? 'shadow-2xl scale-105' : 'shadow-lg'
               }`}
             >
-              {/* Popular Badge */}
               {tier.isPopular && (
                 <motion.div
                   initial={{ scale: 0 }}
@@ -93,11 +97,9 @@ export function PricingTiers() {
                 </motion.div>
               )}
 
-              {/* Tier Name */}
               <h4 className="text-2xl font-bold text-gray-900 mb-2">{tier.name}</h4>
               <p className="text-gray-600 mb-6">{tier.description}</p>
 
-              {/* Price */}
               <div className="mb-6">
                 <div className="flex items-baseline gap-1">
                   <span className="text-4xl font-bold text-gray-900">
@@ -107,7 +109,6 @@ export function PricingTiers() {
                 </div>
               </div>
 
-              {/* Features */}
               <ul className="space-y-3 mb-8">
                 {tier.features.map((feature, idx) => (
                   <li key={idx} className="flex items-start gap-3">
@@ -136,9 +137,8 @@ export function PricingTiers() {
                 ))}
               </ul>
 
-              {/* CTA Button - Fixed: now functional */}
               <button
-                onClick={() => handleGetStarted(tier.id)}
+                onClick={() => handleGetStarted(tier.id, tier.name)}
                 className={`w-full py-3 rounded-lg font-semibold text-white transition-all ${colors.button}`}
               >
                 Get Started

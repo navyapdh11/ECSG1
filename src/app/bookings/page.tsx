@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, DollarSign, ArrowLeft, Search, ExternalLink, CheckCircle, XCircle, Clock as ClockIcon, CreditCard } from 'lucide-react';
+import { Calendar, Clock, DollarSign, ArrowLeft, Search, ExternalLink, CheckCircle, XCircle, Clock as ClockIcon, CreditCard, Mail } from 'lucide-react';
 
 interface Booking {
   id: string;
@@ -31,6 +31,8 @@ export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [emailInput, setEmailInput] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -38,8 +40,25 @@ export default function BookingsPage() {
     const sessionId = params.get('session_id');
     const email = params.get('email') || '';
 
-    if (sessionId || email) {
+    if (email) {
+      setEmailInput(email);
       fetchBookings(email);
+    } else if (sessionId) {
+      // Try to fetch by email from localStorage if available
+      const stored = localStorage.getItem('booking-storage');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed.state?.address?.email) {
+            setEmailInput(parsed.state.address.email);
+            fetchBookings(parsed.state.address.email);
+          }
+        } catch {
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
     } else {
       setLoading(false);
     }
@@ -48,9 +67,9 @@ export default function BookingsPage() {
   async function fetchBookings(email: string) {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
-      if (email) params.set('email', email);
-      const res = await fetch(`/api/bookings?${params}`);
+      setError(null);
+      setHasSearched(true);
+      const res = await fetch(`/api/bookings?email=${encodeURIComponent(email)}`);
       if (!res.ok) throw new Error('Failed to fetch bookings');
       const data = await res.json();
       setBookings(data);
@@ -60,6 +79,13 @@ export default function BookingsPage() {
       setLoading(false);
     }
   }
+
+  const handleEmailLookup = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (emailInput.trim()) {
+      fetchBookings(emailInput.trim());
+    }
+  };
 
   const filtered = bookings.filter(
     (b) =>
@@ -83,17 +109,43 @@ export default function BookingsPage() {
           </div>
         </div>
 
+        {/* Email Lookup Form - #3 */}
+        <form onSubmit={handleEmailLookup} className="mb-6">
+          <div className="flex gap-3">
+            <div className="flex-1 relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="email"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                placeholder="Enter your email to look up bookings..."
+                className="w-full pl-10 pr-4 py-3 rounded-lg border-2 border-gray-200 focus:border-primary-600 focus:ring-2 focus:ring-primary-200 transition-all outline-none"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              className="px-6 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors flex items-center gap-2"
+            >
+              <Search className="w-4 h-4" />
+              Look Up
+            </button>
+          </div>
+        </form>
+
         {/* Search */}
-        <div className="relative mb-6">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by booking ID, name, or email..."
-            className="w-full pl-10 pr-4 py-3 rounded-lg border-2 border-gray-200 focus:border-primary-600 focus:ring-2 focus:ring-primary-200 transition-all outline-none"
-          />
-        </div>
+        {bookings.length > 0 && (
+          <div className="relative mb-6">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by booking ID, name, or email..."
+              className="w-full pl-10 pr-4 py-3 rounded-lg border-2 border-gray-200 focus:border-primary-600 focus:ring-2 focus:ring-primary-200 transition-all outline-none"
+            />
+          </div>
+        )}
 
         {/* Loading */}
         {loading && (
@@ -110,23 +162,30 @@ export default function BookingsPage() {
           </motion.div>
         )}
 
-        {/* Empty State */}
-        {!loading && !error && filtered.length === 0 && (
+        {/* No bookings found */}
+        {!loading && !error && hasSearched && filtered.length === 0 && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-16 bg-white rounded-xl">
             <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No bookings found</h3>
             <p className="text-gray-600 mb-6">
-              {search ? 'Try adjusting your search' : 'Book a cleaning service to get started'}
+              {search ? 'Try adjusting your search' : `No bookings found for ${emailInput}`}
             </p>
-            {!search && (
-              <Link
-                href="/#booking"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
-              >
-                Book a Cleaning
-                <ExternalLink className="w-4 h-4" />
-              </Link>
-            )}
+            <Link
+              href="/#booking"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium"
+            >
+              Book a Cleaning
+              <ExternalLink className="w-4 h-4" />
+            </Link>
+          </motion.div>
+        )}
+
+        {/* Empty state (no search yet) */}
+        {!loading && !error && !hasSearched && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-16 bg-white rounded-xl">
+            <Mail className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Look up your bookings</h3>
+            <p className="text-gray-600 mb-6">Enter your email above to view your booking history</p>
           </motion.div>
         )}
 

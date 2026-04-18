@@ -17,7 +17,7 @@ interface BookingStore {
   selectedServices: BookingService[];
   selectedDate: Date | null;
   selectedTime: string | null;
-  address: Partial<Address & { email?: string; name?: string; phone?: string }>;
+  address: Partial<Address>;
   specialInstructions: string;
   booking: Booking | null;
   

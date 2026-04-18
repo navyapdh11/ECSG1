@@ -2,17 +2,26 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, Calendar, Clock, MapPin, DollarSign, FileText, CreditCard, Loader2 } from 'lucide-react';
+import {
+  CheckCircle, Calendar, Clock, MapPin, DollarSign, FileText, CreditCard,
+  Loader2, Shield, Award, BadgeCheck, Share2, Copy, Check, QrCode
+} from 'lucide-react';
 import { useBookingStore } from '@/store/bookingStore';
 import { useGamificationStore } from '@/store/gamificationStore';
 import { formatPrice, formatDate, formatTime } from '@/lib/utils';
+import { useToast } from '@/components/ui/Toast';
 
 export function BookingConfirmation() {
   const { selectedServices, selectedDate, selectedTime, address, specialInstructions, getTotalPrice } =
     useBookingStore();
-  const { addPoints } = useGamificationStore();
+  const { addPoints, recordBooking } = useGamificationStore();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showShare, setShowShare] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const { addToast } = useToast();
+  const totalPrice = getTotalPrice();
+  const bookingId = `ECS-${Date.now().toString(36).toUpperCase().slice(-6)}`;
 
   // Safety: handle missing data
   if (selectedServices.length === 0) {
@@ -23,13 +32,13 @@ export function BookingConfirmation() {
     );
   }
 
-  const totalPrice = getTotalPrice();
-
   const handleCheckout = async () => {
     setProcessing(true);
     setError(null);
 
     try {
+      recordBooking();
+      
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -62,16 +71,27 @@ export function BookingConfirmation() {
       }
 
       const data = await response.json();
-
-      // Award points
       addPoints(Math.floor(totalPrice / 10));
-
-      // Redirect to Stripe Checkout
-      window.location.href = data.url;
+      addToast(`Booking ${bookingId} created! Redirecting to payment...`, 'success');
+      
+      // Redirect to interstitial page
+      window.location.href = `/redirecting?booking_id=${bookingId}&checkout_url=${encodeURIComponent(data.url)}`;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Payment failed');
       setProcessing(false);
     }
+  };
+
+  const handleShare = () => {
+    setShowShare(true);
+  };
+
+  const handleCopyDetails = () => {
+    const text = `Booking ${bookingId}\n${selectedServices.map(s => `${s.service.name} x${s.quantity}`).join(', ')}\n${formatDate(selectedDate || new Date())} at ${selectedTime}\nTotal: ${formatPrice(totalPrice)}`;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    addToast('Booking details copied to clipboard!', 'info');
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -85,8 +105,31 @@ export function BookingConfirmation() {
         <CheckCircle className="w-16 h-16 text-primary-600 mx-auto mb-4" aria-hidden="true" />
         <h2 className="text-3xl font-bold text-gray-900 mb-2">Ready to Pay</h2>
         <p className="text-gray-600">
-          Review your booking details and proceed to secure payment
+          Review your booking and proceed to secure payment
         </p>
+        <p className="text-sm text-gray-500 mt-2">Booking ID: <code className="bg-gray-100 px-2 py-1 rounded font-mono">{bookingId}</code></p>
+      </motion.div>
+
+      {/* Trust Signals - #6 */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="grid grid-cols-3 gap-3"
+      >
+        {[
+          { icon: Shield, text: 'Police-Checked', color: 'text-success-600 bg-success-50' },
+          { icon: Award, text: 'Fully Insured', color: 'text-primary-600 bg-primary-50' },
+          { icon: BadgeCheck, text: 'Bond-Back Guarantee', color: 'text-accent-600 bg-accent-50' },
+        ].map((badge) => {
+          const Icon = badge.icon;
+          return (
+            <div key={badge.text} className={`flex flex-col items-center gap-2 p-3 rounded-xl ${badge.color}`}>
+              <Icon className="w-5 h-5" />
+              <span className="text-xs font-medium text-center">{badge.text}</span>
+            </div>
+          );
+        })}
       </motion.div>
 
       {/* Booking Details */}
@@ -110,31 +153,47 @@ export function BookingConfirmation() {
           </div>
         </div>
 
-        {/* Date & Time */}
-        <div className="p-6 bg-white rounded-xl border-2 border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-primary-600" aria-hidden="true" />
-            Schedule
-          </h3>
-          <div className="space-y-3">
-            {selectedDate && (
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <Calendar className="w-5 h-5 text-primary-600 flex-shrink-0" aria-hidden="true" />
-                <div>
-                  <p className="text-sm text-gray-600">Date</p>
-                  <p className="font-medium text-gray-900">{formatDate(selectedDate)}</p>
+        {/* Date & Time + Cleaner Info */}
+        <div className="space-y-4">
+          <div className="p-6 bg-white rounded-xl border-2 border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-primary-600" aria-hidden="true" />
+              Schedule
+            </h3>
+            <div className="space-y-3">
+              {selectedDate && (
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <Calendar className="w-5 h-5 text-primary-600 flex-shrink-0" aria-hidden="true" />
+                  <div>
+                    <p className="text-sm text-gray-600">Date</p>
+                    <p className="font-medium text-gray-900">{formatDate(selectedDate)}</p>
+                  </div>
                 </div>
-              </div>
-            )}
-            {selectedTime && (
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <Clock className="w-5 h-5 text-primary-600 flex-shrink-0" aria-hidden="true" />
-                <div>
-                  <p className="text-sm text-gray-600">Time</p>
-                  <p className="font-medium text-gray-900">{formatTime(selectedTime)}</p>
+              )}
+              {selectedTime && (
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <Clock className="w-5 h-5 text-primary-600 flex-shrink-0" aria-hidden="true" />
+                  <div>
+                    <p className="text-sm text-gray-600">Time</p>
+                    <p className="font-medium text-gray-900">{formatTime(selectedTime)}</p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+              {/* Estimated arrival window - #6 */}
+              {selectedTime && (
+                <div className="p-3 bg-primary-50 rounded-lg">
+                  <p className="text-sm text-primary-700">
+                    🚗 Cleaner arrives between{' '}
+                    <strong>{formatTime(selectedTime)}</strong> and{' '}
+                    <strong>{(() => {
+                      const [h, m] = selectedTime.split(':');
+                      const newH = Math.min(parseInt(h, 10) + 1, 23);
+                      return formatTime(`${newH}:${m}`);
+                    })()}</strong>
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -194,12 +253,12 @@ export function BookingConfirmation() {
         </motion.div>
       )}
 
-      {/* Checkout Button */}
+      {/* Checkout + Share Actions - #13 */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="p-6 bg-gradient-to-br from-accent-50 to-primary-50 rounded-xl"
+        className="space-y-4"
       >
         <button
           onClick={handleCheckout}
@@ -218,10 +277,64 @@ export function BookingConfirmation() {
             </>
           )}
         </button>
-        <p className="text-center text-sm text-gray-600 mt-3">
-          Secure payment powered by Stripe • All major cards accepted
-        </p>
+
+        {/* Share Receipt - #13 */}
+        <div className="flex gap-3">
+          <button
+            onClick={handleShare}
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-gray-200 text-gray-700 hover:border-primary-300 hover:bg-primary-50 transition-colors font-medium"
+          >
+            <Share2 className="w-4 h-4" />
+            Share Receipt
+          </button>
+          <button
+            onClick={handleCopyDetails}
+            className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl border-2 border-gray-200 text-gray-700 hover:border-primary-300 hover:bg-primary-50 transition-colors font-medium"
+          >
+            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            {copied ? 'Copied!' : 'Copy'}
+          </button>
+        </div>
       </motion.div>
+
+      {/* Share Modal - #13 */}
+      {showShare && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowShare(false)}>
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-2xl p-6 max-w-sm w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Share Receipt</h3>
+            
+            {/* QR Code placeholder */}
+            <div className="bg-gray-50 rounded-xl p-6 mb-4 text-center">
+              <QrCode className="w-24 h-24 mx-auto mb-3 text-gray-700" />
+              <p className="text-sm text-gray-600">Scan to view booking details</p>
+              <p className="text-xs text-gray-400 font-mono mt-1">{bookingId}</p>
+            </div>
+
+            {/* Booking Summary */}
+            <div className="space-y-2 text-sm mb-4">
+              <p><strong>Service:</strong> {selectedServices.map(s => s.service.name).join(', ')}</p>
+              <p><strong>Date:</strong> {formatDate(selectedDate || new Date())}</p>
+              <p><strong>Total:</strong> {formatPrice(totalPrice)}</p>
+            </div>
+
+            <button
+              onClick={() => setShowShare(false)}
+              className="w-full py-3 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 transition-colors"
+            >
+              Done
+            </button>
+          </motion.div>
+        </div>
+      )}
+
+      <p className="text-center text-sm text-gray-600">
+        Secure payment powered by Stripe • All major cards accepted • 10% GST included
+      </p>
     </div>
   );
 }

@@ -6,21 +6,19 @@ import { ServiceSelection } from './ServiceSelection';
 import { DateTimePicker } from './DateTimePicker';
 import { BookingDetails } from './BookingDetails';
 import { BookingConfirmation } from './BookingConfirmation';
+import { ResumeBanner } from './ResumeBanner';
 import { useBookingStore } from '@/store/bookingStore';
 
 export function BookingForm() {
   const { currentStep, nextStep, canProceed } = useBookingStore();
   const formSubmitRef = useRef<(() => boolean) | null>(null);
 
-  // Callback for BookingDetails to register its submit handler
   const registerFormSubmit = useCallback((submitFn: () => boolean) => {
     formSubmitRef.current = submitFn;
   }, []);
 
-  // Override nextStep to validate form first
   const handleNext = useCallback(() => {
     if (currentStep === 'details') {
-      // Trigger form validation before proceeding
       const isValid = formSubmitRef.current?.();
       if (!isValid) return;
     }
@@ -45,19 +43,22 @@ export function BookingForm() {
   };
 
   return (
-    <section id="booking" className="py-20 bg-gray-50">
+    <section id="booking" className="py-20 bg-gray-50 dark:bg-gray-800">
       <div className="container mx-auto px-4">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
               Book Your Cleaning
             </h1>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-gray-600 dark:text-gray-400">
               Simple, fast, and flexible scheduling
             </p>
           </div>
 
-          <div className="bg-white p-8 rounded-2xl shadow-xl">
+          {/* Resume Banner - #1 */}
+          <ResumeBanner />
+
+          <div className="bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-xl">
             {currentStep !== 'confirmation' && (
               <BookingStepWizard onNext={handleNext} />
             )}

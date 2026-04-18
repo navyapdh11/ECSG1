@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, Zap, CalendarDays, CalendarRange, Repeat } from 'lucide-react';
 import { useBookingStore } from '@/store/bookingStore';
 import { timeSlots } from '@/data/mockData';
 import { formatPrice, formatTime } from '@/lib/utils';
@@ -15,7 +15,24 @@ import {
   eachDayOfInterval,
   isToday,
   isPast,
+  addDays,
 } from 'date-fns';
+
+// Quick date pick options - #7
+const quickPicks = [
+  { label: 'ASAP', icon: Zap, getValue: () => addDays(new Date(), 1) },
+  { label: 'This Sat', icon: CalendarDays, getValue: () => {
+    const d = new Date();
+    while (d.getDay() !== 6) addDays(d, 1);
+    return d;
+  }},
+  { label: 'This Sun', icon: CalendarRange, getValue: () => {
+    const d = new Date();
+    while (d.getDay() !== 0) addDays(d, 1);
+    return d;
+  }},
+  { label: 'Weekly', icon: Repeat, getValue: () => addDays(new Date(), 7) },
+];
 
 export function DateTimePicker() {
   const { selectedDate, selectedTime, setDate, setTime, getTotalPrice } = useBookingStore();
@@ -40,6 +57,25 @@ export function DateTimePicker() {
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Choose Date & Time</h2>
         <p className="text-gray-600">Select your preferred cleaning date and time slot</p>
+      </div>
+
+      {/* Quick Picks - #7 */}
+      <div className="flex flex-wrap gap-2">
+        {quickPicks.map((pick) => {
+          const Icon = pick.icon;
+          return (
+            <motion.button
+              key={pick.label}
+              onClick={() => setDate(pick.getValue())}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary-50 to-accent-50 text-primary-700 rounded-lg font-medium text-sm hover:from-primary-100 hover:to-accent-100 transition-all border border-primary-200"
+            >
+              <Icon className="w-4 h-4" />
+              {pick.label}
+            </motion.button>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -77,7 +113,6 @@ export function DateTimePicker() {
 
           {/* Calendar Grid */}
           <div className="grid grid-cols-7 gap-1" role="grid" aria-label="Calendar">
-            {/* Empty cells for days before month starts */}
             {Array.from({ length: startOfMonth(currentMonth).getDay() }).map((_, i) => (
               <div key={`empty-${i}`} role="gridcell" aria-hidden="true" />
             ))}
